@@ -1,0 +1,72 @@
+# Use root/example as user/password credentials
+version: '3.1'
+
+services:
+  nginx:
+    container_name: nginx_example_app
+    build:
+      context: .
+      dockerfile: docker/nginx.docker
+    volumes:
+      - ./:/var/www
+      # - ./docker/nginx/ssl:/etc/nginx/ssl
+    ports:
+      # - "8088:443"
+      - "8080:80"
+    links:
+      - php-fpm
+
+  php-fpm:
+    container_name: php_example_app
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: unless-stopped
+    tty: true
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    links:
+      - mysql
+    depends_on:
+      - mysql
+
+  mysql:
+    container_name: mysql_example_app
+    image: mysql:8.0.31
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: example_app
+    volumes:
+      - "./docker/mysql:/var/lib/mysql"
+      - "./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf"
+    ports:
+      - "33062:3306"
+    command: --default-authentication-plugin=mysql_native_password
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin_example_app
+    restart: always
+    ports:
+     - '8084:80'
+    environment:
+      MAX_EXECUTION_TIME: 600
+      UPLOAD_LIMIT: 800M
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+      MYSQL_ROOT_PASSWORD: root # server mysql, user root, password root
+    depends_on:
+     - mysql
+
+  # node:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/node/node.docker
+  #   container_name: node
+  #   volumes:
+  #     - ./:/var/www
+  #   tty: true
